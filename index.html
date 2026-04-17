@@ -1,0 +1,1081 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dashboard — Frota Oficial CGE/RJ</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+  :root {
+    --laranja:       #E8611A;
+    --laranja-vivo:  #FF6B1A;
+    --laranja-escuro:#B84A0E;
+    --laranja-pale:  #FFF0E8;
+    --ouro:          #C8873A;
+    --chumbo:        #1A1814;
+    --chumbo-medio:  #2D2822;
+    --chumbo-suave:  #3D3830;
+    --bege:          #F5EFE6;
+    --bege-escuro:   #E8DDD0;
+    --texto:         #F0EAE0;
+    --texto-muted:   #A09080;
+    --verde-ok:      #4CAF7D;
+    --vermelho-alerta:#E85A1A;
+    --azul-info:     #4A8FA8;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--chumbo);
+    color: var(--texto);
+    font-family: 'DM Sans', sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Textura de fundo */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      radial-gradient(ellipse at 10% 20%, rgba(232,97,26,0.08) 0%, transparent 50%),
+      radial-gradient(ellipse at 90% 80%, rgba(200,135,58,0.06) 0%, transparent 50%);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* HEADER */
+  .header {
+    position: relative;
+    z-index: 10;
+    padding: 32px 48px 28px;
+    border-bottom: 1px solid rgba(232,97,26,0.2);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: rgba(26,24,20,0.8);
+    backdrop-filter: blur(12px);
+  }
+
+  .header-left {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+  }
+
+  .brasao {
+    width: 64px;
+    height: 64px;
+    position: relative;
+    flex-shrink: 0;
+  }
+
+  .brasao svg {
+    width: 100%;
+    height: 100%;
+    filter: drop-shadow(0 0 12px rgba(232,97,26,0.5));
+  }
+
+  .header-titles h1 {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 2.2rem;
+    letter-spacing: 0.06em;
+    color: var(--laranja-vivo);
+    line-height: 1;
+  }
+
+  .header-titles p {
+    font-size: 0.78rem;
+    color: var(--texto-muted);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    margin-top: 4px;
+    font-family: 'DM Mono', monospace;
+  }
+
+  .header-right {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 6px;
+  }
+
+  .badge-gov {
+    background: linear-gradient(135deg, var(--laranja-escuro), var(--ouro));
+    color: white;
+    font-size: 0.65rem;
+    font-family: 'DM Mono', monospace;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    padding: 4px 12px;
+    border-radius: 2px;
+    font-weight: 500;
+  }
+
+  .periodo {
+    font-size: 0.72rem;
+    color: var(--texto-muted);
+    font-family: 'DM Mono', monospace;
+  }
+
+  /* TABS */
+  .tabs {
+    position: relative;
+    z-index: 10;
+    display: flex;
+    gap: 0;
+    padding: 0 48px;
+    background: var(--chumbo-medio);
+    border-bottom: 1px solid rgba(232,97,26,0.15);
+  }
+
+  .tab {
+    padding: 14px 24px;
+    font-size: 0.78rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    font-weight: 500;
+    cursor: pointer;
+    color: var(--texto-muted);
+    border-bottom: 2px solid transparent;
+    transition: all 0.2s;
+    font-family: 'DM Mono', monospace;
+    background: none;
+    border-top: none;
+    border-left: none;
+    border-right: none;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .tab:hover { color: var(--laranja); }
+
+  .tab.active {
+    color: var(--laranja-vivo);
+    border-bottom-color: var(--laranja-vivo);
+  }
+
+  /* MAIN */
+  .main {
+    position: relative;
+    z-index: 5;
+    padding: 40px 48px;
+    max-width: 1600px;
+  }
+
+  /* PAINEIS */
+  .painel { display: none; }
+  .painel.active { display: block; }
+
+  /* KPIS */
+  .kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 16px;
+    margin-bottom: 32px;
+  }
+
+  .kpi {
+    background: var(--chumbo-medio);
+    border: 1px solid rgba(232,97,26,0.15);
+    border-radius: 4px;
+    padding: 20px;
+    position: relative;
+    overflow: hidden;
+    transition: border-color 0.2s, transform 0.2s;
+    animation: fadeUp 0.5s ease both;
+  }
+
+  .kpi:hover {
+    border-color: rgba(232,97,26,0.4);
+    transform: translateY(-2px);
+  }
+
+  .kpi::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, var(--laranja), var(--ouro));
+  }
+
+  .kpi-icon {
+    font-size: 1.4rem;
+    margin-bottom: 10px;
+    display: block;
+  }
+
+  .kpi-valor {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 2.4rem;
+    color: var(--laranja-vivo);
+    line-height: 1;
+  }
+
+  .kpi-label {
+    font-size: 0.68rem;
+    color: var(--texto-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    margin-top: 6px;
+    font-family: 'DM Mono', monospace;
+  }
+
+  .kpi-sub {
+    font-size: 0.72rem;
+    color: var(--ouro);
+    margin-top: 4px;
+  }
+
+  /* GRID CHARTS */
+  .charts-grid {
+    display: grid;
+    gap: 20px;
+  }
+
+  .row-2 { grid-template-columns: 1fr 1fr; }
+  .row-3 { grid-template-columns: 2fr 1fr 1fr; }
+  .row-1 { grid-template-columns: 1fr; }
+
+  .card {
+    background: var(--chumbo-medio);
+    border: 1px solid rgba(232,97,26,0.12);
+    border-radius: 4px;
+    padding: 24px;
+    animation: fadeUp 0.6s ease both;
+  }
+
+  .card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 20px;
+  }
+
+  .card-title {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.1rem;
+    letter-spacing: 0.08em;
+    color: var(--laranja);
+  }
+
+  .card-badge {
+    font-size: 0.62rem;
+    font-family: 'DM Mono', monospace;
+    color: var(--texto-muted);
+    background: rgba(232,97,26,0.08);
+    padding: 3px 8px;
+    border-radius: 2px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+  }
+
+  /* GARGALOS */
+  .gargalo-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin-bottom: 28px;
+  }
+
+  .gargalo-card {
+    background: var(--chumbo-suave);
+    border-left: 3px solid var(--vermelho-alerta);
+    border-radius: 0 4px 4px 0;
+    padding: 18px 20px;
+    animation: fadeUp 0.5s ease both;
+  }
+
+  .gargalo-card.ouro { border-left-color: var(--ouro); }
+  .gargalo-card.azul { border-left-color: var(--azul-info); }
+  .gargalo-card.verde { border-left-color: var(--verde-ok); }
+
+  .gargalo-titulo {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1rem;
+    letter-spacing: 0.06em;
+    margin-bottom: 8px;
+  }
+
+  .gargalo-card:nth-child(1) .gargalo-titulo { color: var(--vermelho-alerta); }
+  .gargalo-card.ouro .gargalo-titulo { color: var(--ouro); }
+  .gargalo-card.azul .gargalo-titulo { color: var(--azul-info); }
+  .gargalo-card.verde .gargalo-titulo { color: var(--verde-ok); }
+
+  .gargalo-texto {
+    font-size: 0.8rem;
+    color: var(--texto-muted);
+    line-height: 1.6;
+  }
+
+  .gargalo-texto strong {
+    color: var(--texto);
+  }
+
+  .gargalo-numero {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 2rem;
+    line-height: 1;
+    margin-bottom: 4px;
+  }
+
+  .gargalo-card:nth-child(1) .gargalo-numero { color: var(--vermelho-alerta); }
+  .gargalo-card.ouro .gargalo-numero { color: var(--ouro); }
+  .gargalo-card.azul .gargalo-numero { color: var(--azul-info); }
+  .gargalo-card.verde .gargalo-numero { color: var(--verde-ok); }
+
+  /* RECOMENDAÇÕES */
+  .rec-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .rec-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+    background: var(--chumbo-suave);
+    border-radius: 4px;
+    padding: 14px 18px;
+    border: 1px solid rgba(232,97,26,0.08);
+    animation: fadeUp 0.5s ease both;
+  }
+
+  .rec-num {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.8rem;
+    color: var(--laranja);
+    line-height: 1;
+    min-width: 32px;
+  }
+
+  .rec-content h4 {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--texto);
+    margin-bottom: 4px;
+  }
+
+  .rec-content p {
+    font-size: 0.78rem;
+    color: var(--texto-muted);
+    line-height: 1.5;
+  }
+
+  /* TABELA */
+  .tabela-wrap {
+    overflow-x: auto;
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.78rem;
+  }
+
+  thead th {
+    background: rgba(232,97,26,0.1);
+    color: var(--laranja);
+    font-family: 'DM Mono', monospace;
+    font-size: 0.65rem;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    padding: 10px 14px;
+    text-align: left;
+    border-bottom: 1px solid rgba(232,97,26,0.2);
+  }
+
+  tbody tr {
+    border-bottom: 1px solid rgba(255,255,255,0.04);
+    transition: background 0.15s;
+  }
+
+  tbody tr:hover { background: rgba(232,97,26,0.05); }
+
+  tbody td {
+    padding: 10px 14px;
+    color: var(--texto-muted);
+  }
+
+  tbody td:first-child { color: var(--texto); font-weight: 500; }
+
+  .pill {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 2px;
+    font-size: 0.65rem;
+    font-family: 'DM Mono', monospace;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+
+  .pill-alta    { background: rgba(232,97,26,0.15); color: var(--laranja); }
+  .pill-urgente { background: rgba(232,90,26,0.2);  color: #FF4500; }
+  .pill-baixa   { background: rgba(76,175,125,0.15); color: var(--verde-ok); }
+
+  /* FROTA CARDS */
+  .frota-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+    margin-bottom: 28px;
+  }
+
+  .frota-card {
+    background: var(--chumbo-suave);
+    border: 1px solid rgba(232,97,26,0.15);
+    border-radius: 4px;
+    padding: 20px;
+    text-align: center;
+    animation: fadeUp 0.5s ease both;
+    transition: transform 0.2s, border-color 0.2s;
+  }
+
+  .frota-card:hover {
+    transform: translateY(-3px);
+    border-color: var(--laranja);
+  }
+
+  .frota-icon { font-size: 2.4rem; margin-bottom: 10px; }
+
+  .frota-placa {
+    font-family: 'DM Mono', monospace;
+    font-size: 1rem;
+    font-weight: 500;
+    color: var(--laranja-vivo);
+    background: rgba(232,97,26,0.1);
+    padding: 4px 12px;
+    border-radius: 2px;
+    display: inline-block;
+    margin-bottom: 8px;
+    letter-spacing: 0.1em;
+  }
+
+  .frota-modelo {
+    font-size: 0.78rem;
+    color: var(--texto);
+    font-weight: 500;
+    margin-bottom: 4px;
+  }
+
+  .frota-periodo {
+    font-size: 0.68rem;
+    color: var(--texto-muted);
+    font-family: 'DM Mono', monospace;
+    margin-bottom: 12px;
+  }
+
+  .frota-bar-wrap {
+    background: rgba(255,255,255,0.06);
+    border-radius: 2px;
+    height: 4px;
+    overflow: hidden;
+    margin-bottom: 6px;
+  }
+
+  .frota-bar {
+    height: 100%;
+    background: linear-gradient(90deg, var(--laranja), var(--ouro));
+    border-radius: 2px;
+  }
+
+  .frota-reservas {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.6rem;
+    color: var(--ouro);
+  }
+
+  .frota-reservas span {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.65rem;
+    color: var(--texto-muted);
+    display: block;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+  }
+
+  /* ANIMAÇÕES */
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(16px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  /* SCROLLBAR */
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: var(--chumbo); }
+  ::-webkit-scrollbar-thumb { background: var(--laranja-escuro); border-radius: 3px; }
+
+  /* DIVIDER */
+  .section-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.65rem;
+    text-transform: uppercase;
+    letter-spacing: 0.2em;
+    color: var(--texto-muted);
+    margin: 28px 0 14px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .section-label::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: rgba(232,97,26,0.15);
+  }
+
+  canvas { max-height: 260px; }
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<header class="header">
+  <div class="header-left">
+    <div class="brasao">
+      <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+        <!-- Escudo estilizado RJ -->
+        <defs>
+          <linearGradient id="grad1" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" style="stop-color:#E8611A"/>
+            <stop offset="100%" style="stop-color:#C8873A"/>
+          </linearGradient>
+        </defs>
+        <!-- Escudo -->
+        <path d="M50 8 L85 22 L85 58 Q85 80 50 95 Q15 80 15 58 L15 22 Z"
+              fill="none" stroke="url(#grad1)" stroke-width="2.5"/>
+        <!-- Estrelas do RJ -->
+        <circle cx="50" cy="38" r="3" fill="#E8611A"/>
+        <circle cx="38" cy="52" r="2.5" fill="#C8873A"/>
+        <circle cx="62" cy="52" r="2.5" fill="#C8873A"/>
+        <circle cx="50" cy="62" r="2" fill="#E8611A"/>
+        <!-- Carro ícone no centro -->
+        <rect x="33" y="45" width="34" height="14" rx="3" fill="none" stroke="#E8611A" stroke-width="1.5"/>
+        <rect x="38" y="39" width="24" height="10" rx="2" fill="none" stroke="#E8611A" stroke-width="1.5"/>
+        <circle cx="40" cy="60" r="3" fill="#E8611A"/>
+        <circle cx="60" cy="60" r="3" fill="#E8611A"/>
+        <!-- RJ texto -->
+        <text x="50" y="80" text-anchor="middle" fill="#C8873A"
+              font-family="'Bebas Neue', sans-serif" font-size="9" letter-spacing="2">RJ</text>
+      </svg>
+    </div>
+    <div class="header-titles">
+      <h1>Frota Oficial CGE/RJ</h1>
+      <p>Sistema de Reserva de Veículos — Controladoria Geral do Estado</p>
+    </div>
+  </div>
+  <div class="header-right">
+    <span class="badge-gov">🏛 Dados Públicos · SISLOG</span>
+    <span class="periodo">Jul 2023 — Jul 2025 · 512 registros tratados</span>
+  </div>
+</header>
+
+<!-- TABS -->
+<nav class="tabs">
+  <button class="tab active" onclick="mudarTab('visao-geral', this)">📊 Visão Geral</button>
+  <button class="tab" onclick="mudarTab('frota', this)">🚗 Frota</button>
+  <button class="tab" onclick="mudarTab('operacoes', this)">📍 Operações</button>
+  <button class="tab" onclick="mudarTab('gargalos', this)">⚠️ Gargalos & Insights</button>
+</nav>
+
+<main class="main">
+
+  <!-- ====== ABA VISÃO GERAL ====== -->
+  <section class="painel active" id="visao-geral">
+
+    <div class="kpi-grid">
+      <div class="kpi" style="animation-delay:0.0s">
+        <span class="kpi-icon">📋</span>
+        <div class="kpi-valor">512</div>
+        <div class="kpi-label">Total de Reservas</div>
+        <div class="kpi-sub">Jul/2023 — Jul/2025</div>
+      </div>
+      <div class="kpi" style="animation-delay:0.1s">
+        <span class="kpi-icon">✅</span>
+        <div class="kpi-valor">503</div>
+        <div class="kpi-label">Finalizadas</div>
+        <div class="kpi-sub">98.2% de conclusão</div>
+      </div>
+      <div class="kpi" style="animation-delay:0.2s">
+        <span class="kpi-icon">🚗</span>
+        <div class="kpi-valor">4</div>
+        <div class="kpi-label">Veículos na Frota</div>
+        <div class="kpi-sub">2 Mobi · 2 Logan</div>
+      </div>
+      <div class="kpi" style="animation-delay:0.3s">
+        <span class="kpi-icon">👥</span>
+        <div class="kpi-valor">71</div>
+        <div class="kpi-label">Usuários Únicos</div>
+        <div class="kpi-sub">Servidores ativos</div>
+      </div>
+      <div class="kpi" style="animation-delay:0.4s">
+        <span class="kpi-icon">↩️</span>
+        <div class="kpi-valor">60%</div>
+        <div class="kpi-label">Viagens c/ Retorno</div>
+        <div class="kpi-sub">306 ida e volta</div>
+      </div>
+    </div>
+
+    <div class="charts-grid row-2" style="margin-bottom:20px">
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">Reservas por Mês</span>
+          <span class="card-badge">Jul/23 — Jul/25</span>
+        </div>
+        <canvas id="chartMensal"></canvas>
+      </div>
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">Prioridade das Reservas</span>
+          <span class="card-badge">Distribuição</span>
+        </div>
+        <canvas id="chartPrioridade"></canvas>
+      </div>
+    </div>
+
+    <div class="charts-grid row-2">
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">Top 10 Usuários</span>
+          <span class="card-badge">Por nº de reservas</span>
+        </div>
+        <canvas id="chartUsuarios"></canvas>
+      </div>
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">Horários de Pico</span>
+          <span class="card-badge">Hora de início</span>
+        </div>
+        <canvas id="chartHorarios"></canvas>
+      </div>
+    </div>
+  </section>
+
+  <!-- ====== ABA FROTA ====== -->
+  <section class="painel" id="frota">
+
+    <div class="section-label">Composição da Frota</div>
+
+    <div class="frota-grid">
+      <div class="frota-card" style="animation-delay:0.0s">
+        <div class="frota-icon">🚗</div>
+        <div class="frota-placa">RUF8J43</div>
+        <div class="frota-modelo">Fiat Mobi · Branco</div>
+        <div class="frota-periodo">Jul/2023 → Jun/2024</div>
+        <div class="frota-bar-wrap"><div class="frota-bar" style="width:29%"></div></div>
+        <div class="frota-reservas">150 <span>reservas</span></div>
+      </div>
+      <div class="frota-card" style="animation-delay:0.1s">
+        <div class="frota-icon">🚗</div>
+        <div class="frota-placa">RUF8J42</div>
+        <div class="frota-modelo">Fiat Mobi · Branco</div>
+        <div class="frota-periodo">Ago/2023 → Jun/2024</div>
+        <div class="frota-bar-wrap"><div class="frota-bar" style="width:9%"></div></div>
+        <div class="frota-reservas">44 <span>reservas</span></div>
+      </div>
+      <div class="frota-card" style="animation-delay:0.2s">
+        <div class="frota-icon">🚙</div>
+        <div class="frota-placa">SER3A37</div>
+        <div class="frota-modelo">Renault Logan · Branco</div>
+        <div class="frota-periodo">Jun/2024 → Jul/2025</div>
+        <div class="frota-bar-wrap"><div class="frota-bar" style="width:32%"></div></div>
+        <div class="frota-reservas">164 <span>reservas</span></div>
+      </div>
+      <div class="frota-card" style="animation-delay:0.3s">
+        <div class="frota-icon">🚙</div>
+        <div class="frota-placa">SRK8I33</div>
+        <div class="frota-modelo">Renault Logan · Branco</div>
+        <div class="frota-periodo">Jun/2024 → Jul/2025</div>
+        <div class="frota-bar-wrap"><div class="frota-bar" style="width:30%"></div></div>
+        <div class="frota-reservas">154 <span>reservas</span></div>
+      </div>
+    </div>
+
+    <div class="section-label">Análise da Frota</div>
+
+    <div class="charts-grid row-2">
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">Uso por Veículo</span>
+          <span class="card-badge">Total de reservas</span>
+        </div>
+        <canvas id="chartFrota"></canvas>
+      </div>
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">Substituição da Frota</span>
+          <span class="card-badge">Mobi → Logan</span>
+        </div>
+        <canvas id="chartSubstituicao"></canvas>
+      </div>
+    </div>
+  </section>
+
+  <!-- ====== ABA OPERAÇÕES ====== -->
+  <section class="painel" id="operacoes">
+
+    <div class="charts-grid row-2" style="margin-bottom:20px">
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">Top Setores Requisitantes</span>
+          <span class="card-badge">Por volume</span>
+        </div>
+        <canvas id="chartSetores"></canvas>
+      </div>
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">Tipo de Serviço</span>
+          <span class="card-badge">Finalidade da viagem</span>
+        </div>
+        <canvas id="chartServico"></canvas>
+      </div>
+    </div>
+
+    <div class="section-label">Principais Destinos</div>
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">Top Destinos</span>
+        <span class="card-badge">Endereço de chegada</span>
+      </div>
+      <div class="tabela-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Destino</th>
+              <th>Viagens</th>
+              <th>% do Total</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td>1</td><td>Av. Presidente Vargas, 670 — Centro</td><td>140</td><td><div style="display:flex;align-items:center;gap:8px"><div style="width:80px;height:4px;background:rgba(255,255,255,0.06);border-radius:2px"><div style="width:100%;height:100%;background:var(--laranja);border-radius:2px"></div></div>27.3%</div></td></tr>
+            <tr><td>2</td><td>Av. Presidente Vargas, 607 — Centro</td><td>31</td><td><div style="display:flex;align-items:center;gap:8px"><div style="width:80px;height:4px;background:rgba(255,255,255,0.06);border-radius:2px"><div style="width:22%;height:100%;background:var(--ouro);border-radius:2px"></div></div>6.1%</div></td></tr>
+            <tr><td>3</td><td>R. Pinheiro Machado, s/n — Laranjeiras</td><td>31</td><td><div style="display:flex;align-items:center;gap:8px"><div style="width:80px;height:4px;background:rgba(255,255,255,0.06);border-radius:2px"><div style="width:22%;height:100%;background:var(--ouro);border-radius:2px"></div></div>6.1%</div></td></tr>
+            <tr><td>4</td><td>R. Barão de Itapagipe, 225 — Rio Comprido</td><td>16</td><td><div style="display:flex;align-items:center;gap:8px"><div style="width:80px;height:4px;background:rgba(255,255,255,0.06);border-radius:2px"><div style="width:11%;height:100%;background:var(--azul-info);border-radius:2px"></div></div>3.1%</div></td></tr>
+            <tr><td>5</td><td>Av. Presidente Vargas, 1100 — Centro</td><td>12</td><td><div style="display:flex;align-items:center;gap:8px"><div style="width:80px;height:4px;background:rgba(255,255,255,0.06);border-radius:2px"><div style="width:9%;height:100%;background:var(--azul-info);border-radius:2px"></div></div>2.3%</div></td></tr>
+            <tr><td>6</td><td>Av. Erasmo Braga, 118 — Centro (retorno)</td><td>11</td><td><div style="display:flex;align-items:center;gap:8px"><div style="width:80px;height:4px;background:rgba(255,255,255,0.06);border-radius:2px"><div style="width:8%;height:100%;background:var(--texto-muted);border-radius:2px"></div></div>2.1%</div></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- ====== ABA GARGALOS ====== -->
+  <section class="painel" id="gargalos">
+
+    <div class="section-label">Gargalos Identificados</div>
+
+    <div class="gargalo-grid">
+      <div class="gargalo-card">
+        <div class="gargalo-numero">89%</div>
+        <div class="gargalo-titulo">⚠️ Concentração de Destino</div>
+        <div class="gargalo-texto">
+          <strong>27% de todas as viagens</strong> foram para um único endereço: Av. Presidente Vargas, 670. Os 5 principais destinos concentram <strong>45% do total</strong>, sugerindo que parte dessas viagens poderia ser consolidada ou substituída por outros meios.
+        </div>
+      </div>
+      <div class="gargalo-card ouro">
+        <div class="gargalo-numero">69</div>
+        <div class="gargalo-titulo">📌 Usuário com Uso Desproporcional</div>
+        <div class="gargalo-texto">
+          Um único servidor (<strong>Charles Átila Ribeiro Vieira</strong>) realizou 69 reservas — <strong>13,5% de todo o volume</strong> da frota no período. O 2º colocado tem 49. Isso pode indicar dependência excessiva do transporte oficial por parte de um setor específico.
+        </div>
+      </div>
+      <div class="gargalo-card azul">
+        <div class="gargalo-numero">44</div>
+        <div class="gargalo-titulo">🚗 Mobi Subutilizado</div>
+        <div class="gargalo-texto">
+          O <strong>Fiat Mobi RUF8J42</strong> registrou apenas 44 reservas no mesmo período em que o RUF8J43 acumulou 150. Uma diferença de <strong>3,4x</strong> entre veículos do mesmo modelo e período, sugerindo problemas de disponibilidade ou preferência não documentada.
+        </div>
+      </div>
+      <div class="gargalo-card verde">
+        <div class="gargalo-numero">40%</div>
+        <div class="gargalo-titulo">✅ Viagens Sem Retorno</div>
+        <div class="gargalo-texto">
+          <strong>202 viagens (40%)</strong> foram somente de ida — o servidor retornou por conta própria. Isso pode representar <strong>economia real de combustível</strong>, mas também pode indicar falta de planejamento em corridas que poderiam ter retorno organizado.
+        </div>
+      </div>
+    </div>
+
+    <div class="section-label">Recomendações</div>
+
+    <div class="rec-list">
+      <div class="rec-item" style="animation-delay:0.0s">
+        <div class="rec-num">01</div>
+        <div class="rec-content">
+          <h4>Consolidar viagens para destinos recorrentes</h4>
+          <p>Com 27% das viagens indo para um único endereço (Av. Presidente Vargas, 670), é possível criar escalas compartilhadas entre servidores que precisam ir ao mesmo destino no mesmo dia, reduzindo o número de corridas individuais.</p>
+        </div>
+      </div>
+      <div class="rec-item" style="animation-delay:0.1s">
+        <div class="rec-num">02</div>
+        <div class="rec-content">
+          <h4>Investigar desequilíbrio de uso entre os Fiat Mobi</h4>
+          <p>O RUF8J42 teve 3,4x menos reservas que o RUF8J43 no mesmo período. É necessário verificar se houve problemas mecânicos, restrições operacionais ou preferência não documentada dos motoristas, para garantir uso equitativo da frota.</p>
+        </div>
+      </div>
+      <div class="rec-item" style="animation-delay:0.2s">
+        <div class="rec-num">03</div>
+        <div class="rec-content">
+          <h4>Registrar o motorista por viagem</h4>
+          <p>O campo motorista_email contém uma lista fixa de 4 contatos em todas as 512 reservas — impossível saber quem dirigiu cada viagem. Implementar registro individual por corrida permitiria análise de desempenho, horas trabalhadas e distribuição de carga.</p>
+        </div>
+      </div>
+      <div class="rec-item" style="animation-delay:0.3s">
+        <div class="rec-num">04</div>
+        <div class="rec-content">
+          <h4>Avaliar pico de demanda matutino</h4>
+          <p>Os horários 09h e 10h concentram o maior volume de saídas. Com apenas 4 veículos na frota, há risco de conflito de agendamentos nesses horários. Uma política de escalonamento ou priorização por cargo poderia reduzir gargalos operacionais.</p>
+        </div>
+      </div>
+      <div class="rec-item" style="animation-delay:0.4s">
+        <div class="rec-num">05</div>
+        <div class="rec-content">
+          <h4>Padronizar descrições de viagem</h4>
+          <p>"entrega de documentos" e "entrega de documento" aparecem como registros separados — são o mesmo serviço. A falta de padronização dificulta análises categorizadas. Implementar um campo de seleção com categorias fixas no sistema de reserva resolveria isso.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<script>
+const COR = {
+  laranja: '#E8611A',
+  laranjaVivo: '#FF6B1A',
+  laranjaEscuro: '#B84A0E',
+  ouro: '#C8873A',
+  azul: '#4A8FA8',
+  verde: '#4CAF7D',
+  vermelho: '#E85A1A',
+  muted: '#A09080',
+  texto: '#F0EAE0',
+  grid: 'rgba(255,255,255,0.06)',
+  vermelhoVivo: '#FF4444',
+};
+
+Chart.defaults.color = COR.muted;
+Chart.defaults.font.family = "'DM Mono', monospace";
+Chart.defaults.font.size = 11;
+
+const defGrid = {
+  grid: { color: COR.grid, drawBorder: false },
+  ticks: { color: COR.muted }
+};
+
+// CHART 1 — Mensal
+const meses = ['Jul/23','Ago/23','Set/23','Out/23','Nov/23','Dez/23','Jan/24','Fev/24','Mar/24','Abr/24','Mai/24','Jun/24','Jul/24','Ago/24','Set/24','Out/24','Nov/24','Dez/24','Jan/25','Fev/25','Mar/25','Abr/25','Mai/25','Jun/25','Jul/25'];
+const reservasMes = [1,14,16,18,17,15,17,7,24,21,34,32,18,32,39,27,30,22,14,23,16,25,24,21,5];
+
+new Chart(document.getElementById('chartMensal'), {
+  type: 'bar',
+  data: {
+    labels: meses,
+    datasets: [{
+      data: reservasMes,
+      backgroundColor: reservasMes.map(v => v >= 30 ? COR.laranjaVivo : v >= 20 ? COR.laranja : COR.laranjaEscuro),
+      borderRadius: 2,
+      borderSkipped: false,
+    }]
+  },
+  options: {
+    responsive: true,
+    plugins: { legend: { display: false }, tooltip: { callbacks: { label: ctx => ` ${ctx.raw} reservas` } } },
+    scales: {
+      x: { ...defGrid, ticks: { maxRotation: 45, font: { size: 9 } } },
+      y: { ...defGrid, beginAtZero: true }
+    }
+  }
+});
+
+// CHART 2 — Prioridade
+new Chart(document.getElementById('chartPrioridade'), {
+  type: 'doughnut',
+  data: {
+    labels: ['Alta', 'Urgente', 'Baixa'],
+    datasets: [{
+      data: [458, 36, 14],
+      backgroundColor: ['#D4A017', COR.vermelhoVivo, COR.verde],
+      borderColor: '#2D2822',
+      borderWidth: 3,
+      hoverOffset: 8,
+    }]
+  },
+  options: {
+    responsive: true,
+    cutout: '65%',
+    plugins: {
+      legend: { position: 'bottom', labels: { padding: 16, usePointStyle: true, pointStyle: 'circle' } },
+      tooltip: { callbacks: { label: ctx => ` ${ctx.label}: ${ctx.raw} (${((ctx.raw/508)*100).toFixed(1)}%)` } }
+    }
+  }
+});
+
+// CHART 3 — Usuários
+new Chart(document.getElementById('chartUsuarios'), {
+  type: 'bar',
+  data: {
+    labels: ['Charles Átila','Marlene Marçal','Alexandro Dantas','Liliam Anselmo','Leonardo Scalzer','Caroline Rolim','Aline Garcia','Ana Cipriano','Luzia Gil','Gisele Rosendo'],
+    datasets: [{
+      data: [69,49,39,28,24,21,16,15,14,13],
+      backgroundColor: [COR.laranjaVivo, COR.laranja, COR.laranja, COR.laranjaEscuro, COR.laranjaEscuro, COR.ouro, COR.ouro, COR.ouro, COR.muted, COR.muted],
+      borderRadius: 2,
+      borderSkipped: false,
+    }]
+  },
+  options: {
+    indexAxis: 'y',
+    responsive: true,
+    plugins: { legend: { display: false } },
+    scales: {
+      x: { ...defGrid, beginAtZero: true },
+      y: { ...defGrid, ticks: { font: { size: 10 } } }
+    }
+  }
+});
+
+// CHART 4 — Horários
+new Chart(document.getElementById('chartHorarios'), {
+  type: 'bar',
+  data: {
+    labels: ['08:00','08:30','09:00','09:30','10:00','10:30','11:00','12:00','12:30','13:00','13:15','13:30','13:45','14:00','14:30','15:00'],
+    datasets: [{
+      data: [16,9,44,12,47,23,8,12,10,20,11,29,9,15,26,22],
+      backgroundColor: (ctx) => {
+        const v = ctx.dataset.data[ctx.dataIndex];
+        if (v >= 40) return COR.laranjaVivo;
+        if (v >= 25) return COR.laranja;
+        return COR.laranjaEscuro;
+      },
+      borderRadius: 2,
+      borderSkipped: false,
+    }]
+  },
+  options: {
+    responsive: true,
+    plugins: { legend: { display: false } },
+    scales: {
+      x: { ...defGrid, ticks: { maxRotation: 45, font: { size: 9 } } },
+      y: { ...defGrid, beginAtZero: true }
+    }
+  }
+});
+
+// CHART 5 — Frota
+new Chart(document.getElementById('chartFrota'), {
+  type: 'bar',
+  data: {
+    labels: ['RUF8J43\nFiat Mobi', 'RUF8J42\nFiat Mobi', 'SER3A37\nR. Logan', 'SRK8I33\nR. Logan'],
+    datasets: [{
+      data: [150, 44, 164, 154],
+      backgroundColor: [COR.laranjaEscuro, COR.muted, COR.laranjaVivo, COR.laranja],
+      borderRadius: 3,
+      borderSkipped: false,
+    }]
+  },
+  options: {
+    responsive: true,
+    plugins: {
+      legend: { display: false },
+      tooltip: { callbacks: { label: ctx => ` ${ctx.raw} reservas` } }
+    },
+    scales: {
+      x: { ...defGrid },
+      y: { ...defGrid, beginAtZero: true }
+    }
+  }
+});
+
+// CHART 6 — Substituição frota por semestre
+new Chart(document.getElementById('chartSubstituicao'), {
+  type: 'bar',
+  data: {
+    labels: ['2º Sem 2023', '1º Sem 2024', '2º Sem 2024', '1º Sem 2025'],
+    datasets: [
+      {
+        label: 'Fiat Mobi',
+        data: [47, 147, 0, 0],
+        backgroundColor: COR.laranjaEscuro,
+        borderRadius: 2,
+      },
+      {
+        label: 'Renault Logan',
+        data: [0, 15, 148, 97],
+        backgroundColor: COR.laranjaVivo,
+        borderRadius: 2,
+      }
+    ]
+  },
+  options: {
+    responsive: true,
+    plugins: {
+      legend: { position: 'bottom', labels: { usePointStyle: true, pointStyle: 'circle', padding: 14 } }
+    },
+    scales: {
+      x: { ...defGrid, stacked: true },
+      y: { ...defGrid, stacked: true, beginAtZero: true }
+    }
+  }
+});
+
+// CHART 7 — Setores
+new Chart(document.getElementById('chartSetores'), {
+  type: 'bar',
+  data: {
+    labels: ['Dir. Adm. e Finanças','Portal Transparência','Audit. Obras e Eng.','Corregedoria','Gabinete CGE','Audit. Transf. Repasses','Chefia de Gabinete','Audit. Aquisições','Ouvidoria','Assessoria Comunicação'],
+    datasets: [{
+      data: [64,39,34,32,28,22,21,20,18,13],
+      backgroundColor: [COR.laranjaVivo,...Array(9).fill(COR.laranja)],
+      borderRadius: 2,
+      borderSkipped: false,
+    }]
+  },
+  options: {
+    indexAxis: 'y',
+    responsive: true,
+    plugins: { legend: { display: false } },
+    scales: {
+      x: { ...defGrid, beginAtZero: true },
+      y: { ...defGrid, ticks: { font: { size: 9 } } }
+    }
+  }
+});
+
+// CHART 8 — Tipo de serviço
+new Chart(document.getElementById('chartServico'), {
+  type: 'doughnut',
+  data: {
+    labels: ['Entrega Documentos', 'Reuniões', 'Inspeções/Visitas', 'Diligências', 'Outros'],
+    datasets: [{
+      data: [67, 35, 28, 5, 377],
+      backgroundColor: [COR.laranjaVivo, COR.laranja, COR.ouro, COR.azul, COR.muted],
+      borderColor: '#2D2822',
+      borderWidth: 3,
+      hoverOffset: 8,
+    }]
+  },
+  options: {
+    responsive: true,
+    cutout: '60%',
+    plugins: {
+      legend: { position: 'bottom', labels: { padding: 12, usePointStyle: true, pointStyle: 'circle', font: { size: 10 } } }
+    }
+  }
+});
+
+// TABS
+function mudarTab(id, btn) {
+  document.querySelectorAll('.painel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  btn.classList.add('active');
+}
+</script>
+</body>
+</html>
