@@ -109,7 +109,6 @@ Os dados são **públicos**, originados do sistema **SISLOG** da Controladoria G
 
 **João Marcos** — Analista de Dados | JM Analytics
 
-[![LinkedIn](https://img.shields.io/badge/LinkedIn-joao--marcos-blue?style=flat&logo=linkedin)](www.linkedin.com/in/joão-marcos-analytics)
 [![Portfolio](https://img.shields.io/badge/Portfolio-jottamarcos.github.io-orange?style=flat&logo=github)](https://jottamarcos.github.io/portfolio)
 [![GitHub](https://img.shields.io/badge/GitHub-JottaMarcos-black?style=flat&logo=github)](https://github.com/JottaMarcos)
 
